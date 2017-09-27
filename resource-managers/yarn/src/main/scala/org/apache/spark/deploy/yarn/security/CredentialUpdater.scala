@@ -79,6 +79,7 @@ private[spark] class CredentialUpdater(
             val newCredentials = getCredentialsFromHDFSFile(remoteFs, credentialsStatus.getPath)
             lastCredentialsFileSuffix = suffix
             UserGroupInformation.getCurrentUser.addCredentials(newCredentials)
+            FileSystem.get(freshHadoopConf).close()
             logInfo("Credentials updated from credentials file.")
 
             val remainingTime = (getTimeOfNextUpdateFromFileName(credentialsStatus.getPath)
