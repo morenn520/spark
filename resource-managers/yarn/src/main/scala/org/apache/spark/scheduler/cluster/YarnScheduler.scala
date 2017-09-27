@@ -17,6 +17,13 @@
 
 package org.apache.spark.scheduler.cluster
 
+import org.apache.hadoop.yarn.util.RackResolver
+import org.apache.log4j.{Level, Logger}
+
+import org.apache.spark._
+import org.apache.spark.scheduler.TaskSchedulerImpl
+import org.apache.spark.util.Utils
+
 private[spark] class YarnScheduler(sc: SparkContext) extends TaskSchedulerImpl(sc) {
 
   // RackResolver logs an INFO message whenever it resolves a rack, which is way too often.
@@ -27,11 +34,6 @@ private[spark] class YarnScheduler(sc: SparkContext) extends TaskSchedulerImpl(s
   // By default, rack is unknown
   override def getRackForHost(hostPort: String): Option[String] = {
     val host = Utils.parseHostPort(hostPort)._1
-    val rackNode = RackResolver.resolve(sc.hadoopConfiguration, host)
-    if (rackNode.getNetworkLocation.equals(NodeBase.normalize(NetworkTopology.DEFAULT_RACK))) {
-      None
-    } else {
-      Option(rackNode.getNetworkLocation)
-    }
+    Option(RackResolver.resolve(sc.hadoopConfiguration, host).getNetworkLocation)
   }
 }
