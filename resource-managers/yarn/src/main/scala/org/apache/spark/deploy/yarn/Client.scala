@@ -374,7 +374,6 @@ private[spark] class Client(
       // Add credentials to current user's UGI, so that following operations don't need to use the
       // Kerberos tgt to get delegations again in the client side.
       UserGroupInformation.getCurrentUser.addCredentials(credentials)
-      FileSystem.get(freshHadoopConf).close()
       logDebug(YarnSparkHadoopUtil.get.dumpTokens(credentials).mkString("\n"))
     }
 
