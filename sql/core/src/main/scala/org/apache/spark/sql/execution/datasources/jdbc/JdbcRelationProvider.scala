@@ -40,11 +40,49 @@ class JdbcRelationProvider extends CreatableRelationProvider
       null
     } else {
       assert(lowerBound.nonEmpty && upperBound.nonEmpty && numPartitions.nonEmpty)
-      JDBCPartitioningInfo(
+      JDBCPartitioningInfo(resolvePartitionColumnType(parameters),
         partitionColumn.get, lowerBound.get, upperBound.get, numPartitions.get)
     }
     val parts = JDBCRelation.columnPartition(partitionInfo)
     JDBCRelation(parts, jdbcOptions)(sqlContext.sparkSession)
+  }
+
+  def resolvePartitionColumnType(parameters: Map[String, String]): Int = {
+    val options = new JDBCOptions(parameters)
+
+    val conn = JdbcUtils.createConnectionFactory(options)()
+
+    val partitionColumn = options.partitionColumn
+    val table = options.table
+
+    var stmt: java.sql.PreparedStatement = null
+    var rs: java.sql.ResultSet = null
+    try {
+      val resolveSql = s"select * from ($table) resolveTable where 1=0"
+      stmt = conn.prepareStatement(resolveSql)
+      rs = stmt.executeQuery()
+      val rsmd = rs.getMetaData
+      var partitionColumnType = -1
+      for (i <- 0 until rsmd.getColumnCount) {
+        if (rsmd.getColumnName(i + 1).equals(partitionColumn)) {
+          partitionColumnType = rsmd.getColumnType(i + 1)
+        }
+      }
+      partitionColumnType
+    } catch {
+      case e: Exception =>
+        -1
+    } finally {
+      if (rs != null) {
+        rs.close()
+      }
+      if (stmt != null) {
+        rs.close()
+      }
+      if (conn != null) {
+        conn.close()
+      }
+    }
   }
 
   override def createRelation(
